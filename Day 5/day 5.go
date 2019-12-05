@@ -12,6 +12,10 @@ const OpCodeAdd int = 1
 const OpCodeMultiply int = 2
 const OpCodeInput int = 3
 const OpCodeOutput int = 4
+const OpJumpIfTrue int = 5
+const OpJumpIfFalse int = 6
+const OpLessThan int = 7
+const OpEquals int = 8
 const OpCodeHalt int = 99
 
 func getProgramOpcodes() []int {
@@ -19,6 +23,7 @@ func getProgramOpcodes() []int {
 
 	//data, err := ioutil.ReadFile("Day 5/data-inout.in")
 	//data, err := ioutil.ReadFile("Day 5/data-parammode.in")
+	//data, err := ioutil.ReadFile("Day 5/data-jump.in")
 	data, err := ioutil.ReadFile("Day 5/data.in")
 	if err != nil {
 		fmt.Println("File reading error", err)
@@ -34,16 +39,22 @@ func getProgramOpcodes() []int {
 }
 
 func getUserInput() int {
-	return 1
+	return 5
 }
 
 func getParameterByMode(opcodes []int, position int, offset int, mode int) int {
 	var pointer int
 
+	var currentPosition = position + offset
+
+	if currentPosition >= len(opcodes) {
+		return -1
+	}
+
 	if mode == 1 {
-		pointer = position + offset
+		pointer = currentPosition
 	} else {
-		pointer = opcodes[position + offset]
+		pointer = opcodes[currentPosition]
 	}
 
 	if pointer < len(opcodes) {
@@ -69,9 +80,14 @@ func executeOpcodes(_opcodes []int) []int {
 		OpCodeMultiply: 4,
 		OpCodeInput: 2,
 		OpCodeOutput: 2,
+		OpJumpIfTrue: 0,
+		OpJumpIfFalse: 0,
+		OpLessThan: 4,
+		OpEquals: 4,
 	}
 
-	for opCode != OpCodeHalt {
+	OpExecution:
+		for {
 
 		// Split it
 		opCode = opcodes[currentPosition] % 100;
@@ -86,10 +102,40 @@ func executeOpcodes(_opcodes []int) []int {
 			var p3 = getParameterByMode(opcodes, currentPosition, 3, 1)
 			opcodes[p3] =	p1 * p2
 		case OpCodeInput:
-			var target = opcodes[currentPosition + 1]
+			var target = getParameterByMode(opcodes, currentPosition, 1, 1)
 			opcodes[target] = getUserInput()
 		case OpCodeOutput:
 			fmt.Printf("Output: %d\n", p1)
+		case OpJumpIfTrue:
+			if p1 != 0 {
+				currentPosition = p2
+			} else {
+				currentPosition += 3
+			}
+		case OpJumpIfFalse:
+			if p1 == 0 {
+				currentPosition = p2
+			} else {
+				currentPosition += 3
+			}
+		case OpLessThan:
+			var p3 = getParameterByMode(opcodes, currentPosition, 3, 1)
+			var result = 0
+			if p1 < p2 {
+				result = 1
+			}
+			opcodes[p3] = result
+		case OpEquals:
+			var p3 = getParameterByMode(opcodes, currentPosition, 3, 1)
+			var result = 0
+			if p1 == p2 {
+				result = 1
+			}
+			opcodes[p3] = result
+		case OpCodeHalt:
+			break OpExecution
+		default:
+			fmt.Printf("Unknown opcode: %d\n", opCode)
 		}
 
 		currentPosition += pointerIncrements[opCode]
