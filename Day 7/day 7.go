@@ -16,8 +16,10 @@ func getAmplifiersOutput(amplifiers []int) int {
 
 	for _,v := range amplifiers {
 		program := opcodeProgram.New("Day 7/data.in")
-		var output = program.Execute( []int{v, lastOutput} )
-		lastOutput = output[0]
+		program.Execute()
+		program.SendInput(v)
+		program.SendInput(lastOutput)
+		lastOutput = program.Output[0]
 	}
 
 	return lastOutput
@@ -54,15 +56,14 @@ func permuteAmplifiers(amplifiers []int, index int) int {
 	return maxOutput
 }
 
-func getMaxOutput() int {
-	var amplifiers = []int{5,6,7,8,9}
-	var max = permuteAmplifiers(amplifiers, 0)
-	return max
+func getMaxOutput(amplifiers []int) int {
+	return permuteAmplifiers(amplifiers, 0)
 }
 
 func main() {
 
-	var maxOutput = getMaxOutput()
+	var maxOutput = getMaxOutput([]int{0,1,2,3,4})
+	//var maxOutput = getMaxOutput([]int{5,6,7,8,9})
 
 	fmt.Printf("Max Output %d\n", maxOutput)
 	fmt.Printf("Done diddly done!")

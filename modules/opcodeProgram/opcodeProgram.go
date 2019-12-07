@@ -20,17 +20,46 @@ const OpCodeHalt int = 99
 
 type OpcodeProgram struct {
 	opcodes []int
+	breakOnInput bool
+	input int
+	pointer int
+	Output []int
+}
+
+var pointerIncrements = map[int]int{
+	OpCodeAdd: 4,
+	OpCodeMultiply: 4,
+	OpCodeInput: 2,
+	OpCodeOutput: 2,
+	OpJumpIfTrue: 0,
+	OpJumpIfFalse: 0,
+	OpLessThan: 4,
+	OpEquals: 4,
 }
 
 func New(filepath string) OpcodeProgram {
 	op := OpcodeProgram{
 		opcodes: getProgramOpcodes(filepath),
+		breakOnInput: true,
+		input: 0,
+		Output: make([]int, 0),
+		pointer: 0,
 	}
 	return op
 }
 
-func (op OpcodeProgram) Execute(input []int) []int {
-	return executeOpcodes(op.opcodes, input)
+func (op *OpcodeProgram) SendInput(input int) {
+	// have the input
+	op.breakOnInput = false
+	op.input = input
+
+	// continue the execution
+	op.Execute()
+}
+
+func (op *OpcodeProgram) getInput() int {
+	op.breakOnInput = true
+	return op.input
 }
 
 func getProgramOpcodes(filepath string) []int {
@@ -50,107 +79,95 @@ func getProgramOpcodes(filepath string) []int {
 	return opcodes
 }
 
-func getParameterByMode(opcodes []int, position int, offset int, mode int) int {
+func(op OpcodeProgram) getParameterByMode(offset int, mode int) int {
 	var pointer int
 
-	var currentPosition = position + offset
+	var currentPosition = op.pointer + offset
 
-	if currentPosition >= len(opcodes) {
+	if currentPosition >= len(op.opcodes) {
 		return -1
 	}
 
 	if mode == 1 {
 		pointer = currentPosition
 	} else {
-		pointer = opcodes[currentPosition]
+		pointer = op.opcodes[currentPosition]
 	}
 
-	if pointer < len(opcodes) {
-		return opcodes[pointer]
+	if pointer < len(op.opcodes) {
+		return op.opcodes[pointer]
 	} else {
 		return -1
 	}
 }
 
-func getParameter(opcodes []int, position int, offset int) int {
-	var mode = opcodes[position] / int(math.Pow10(offset + 1)) % 10
-	return getParameterByMode(opcodes, position, offset, mode)
+func(op OpcodeProgram) getParameter(offset int) int {
+	var mode = op.opcodes[op.pointer] / int(math.Pow10(offset + 1)) % 10
+	return op.getParameterByMode(offset, mode)
 }
 
-func executeOpcodes(opcodes []int, input []int) []int {
+func(op *OpcodeProgram) Execute() {
 
-	var currentPosition = 0
 	var opCode = 0
-	var inputIndex = 0
-	var output []int
-
-	var pointerIncrements = map[int]int{
-		OpCodeAdd: 4,
-		OpCodeMultiply: 4,
-		OpCodeInput: 2,
-		OpCodeOutput: 2,
-		OpJumpIfTrue: 0,
-		OpJumpIfFalse: 0,
-		OpLessThan: 4,
-		OpEquals: 4,
-	}
 
 OpExecution:
 	for {
 
 		// Split it
-		opCode = opcodes[currentPosition] % 100;
-		var p1 = getParameter(opcodes, currentPosition, 1)
-		var p2 = getParameter(opcodes, currentPosition, 2)
+		opCode = op.opcodes[op.pointer] % 100
+		var p1 = op.getParameter(1)
+		var p2 = op.getParameter(2)
 
 		switch opCode {
 		case OpCodeAdd:
-			var p3 = getParameterByMode(opcodes, currentPosition, 3, 1)
-			opcodes[p3] = p1 + p2
+			var p3 = op.getParameterByMode(3, 1)
+			op.opcodes[p3] = p1 + p2
 		case OpCodeMultiply:
-			var p3 = getParameterByMode(opcodes, currentPosition, 3, 1)
-			opcodes[p3] = p1 * p2
+			var p3 = op.getParameterByMode(3, 1)
+			op.opcodes[p3] = p1 * p2
 		case OpCodeInput:
-			var target = getParameterByMode(opcodes, currentPosition, 1, 1)
-			opcodes[target] = input[inputIndex]
-			inputIndex++
+			var target = op.getParameterByMode(1, 1)
+			if op.breakOnInput {
+				break OpExecution
+			}
+			ip := op.getInput()
+			//fmt.Printf("Read input: %d\n", ip)
+			op.opcodes[target] = ip
 		case OpCodeOutput:
-			output = append(output, p1)
+			op.Output = append(op.Output, p1)
 			//fmt.Printf("Program Output: %d\n", p1)
 		case OpJumpIfTrue:
 			if p1 != 0 {
-				currentPosition = p2
+				op.pointer = p2
 			} else {
-				currentPosition += 3
+				op.pointer += 3
 			}
 		case OpJumpIfFalse:
 			if p1 == 0 {
-				currentPosition = p2
+				op.pointer = p2
 			} else {
-				currentPosition += 3
+				op.pointer += 3
 			}
 		case OpLessThan:
-			var p3 = getParameterByMode(opcodes, currentPosition, 3, 1)
+			var p3 = op.getParameterByMode(3, 1)
 			var result = 0
 			if p1 < p2 {
 				result = 1
 			}
-			opcodes[p3] = result
+			op.opcodes[p3] = result
 		case OpEquals:
-			var p3 = getParameterByMode(opcodes, currentPosition, 3, 1)
+			var p3 = op.getParameterByMode(3, 1)
 			var result = 0
 			if p1 == p2 {
 				result = 1
 			}
-			opcodes[p3] = result
+			op.opcodes[p3] = result
 		case OpCodeHalt:
 			break OpExecution
 		default:
 			fmt.Printf("Unknown opcode: %d\n", opCode)
 		}
 
-		currentPosition += pointerIncrements[opCode]
+		op.pointer += pointerIncrements[opCode]
 	}
-
-	return output
 }
