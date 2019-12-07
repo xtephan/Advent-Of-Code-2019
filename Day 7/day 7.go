@@ -12,14 +12,25 @@ func printAmplifiers(amplifiers []int) {
 }
 
 func getAmplifiersOutput(amplifiers []int) int {
-	var lastOutput = 0
+	var amplifierPrograms = make([]opcodeProgram.OpcodeProgram, len(amplifiers))
 
-	for _,v := range amplifiers {
-		program := opcodeProgram.New("Day 7/data.in")
-		program.Execute()
-		program.SendInput(v)
-		program.SendInput(lastOutput)
-		lastOutput = program.Output[0]
+	// Initialize the amplifiers
+	for i,v := range amplifiers {
+		amplifierPrograms[i] = opcodeProgram.New("Day 7/data.in")
+		amplifierPrograms[i].Execute()
+		amplifierPrograms[i].SendInput(v)
+	}
+
+	// run the programs
+	var lastOutput = 0
+	var finishedExecution = false
+
+	for !finishedExecution {
+		for i, _ := range amplifiers {
+			amplifierPrograms[i].SendInput(lastOutput)
+			lastOutput = amplifierPrograms[i].GetLastOutput()
+			finishedExecution = amplifierPrograms[i].Halted
+		}
 	}
 
 	return lastOutput
@@ -62,8 +73,8 @@ func getMaxOutput(amplifiers []int) int {
 
 func main() {
 
-	var maxOutput = getMaxOutput([]int{0,1,2,3,4})
-	//var maxOutput = getMaxOutput([]int{5,6,7,8,9})
+	//var maxOutput = getMaxOutput([]int{0,1,2,3,4})
+	var maxOutput = getMaxOutput([]int{5,6,7,8,9})
 
 	fmt.Printf("Max Output %d\n", maxOutput)
 	fmt.Printf("Done diddly done!")

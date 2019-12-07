@@ -24,6 +24,7 @@ type OpcodeProgram struct {
 	input int
 	pointer int
 	Output []int
+	Halted bool
 }
 
 var pointerIncrements = map[int]int{
@@ -39,12 +40,14 @@ var pointerIncrements = map[int]int{
 
 func New(filepath string) OpcodeProgram {
 	op := OpcodeProgram{
-		opcodes: getProgramOpcodes(filepath),
+		opcodes: []int {},
 		breakOnInput: true,
 		input: 0,
-		Output: make([]int, 0),
+		Output: []int {},
 		pointer: 0,
+		Halted: false,
 	}
+	op.readOpCodes(filepath)
 	return op
 }
 
@@ -57,26 +60,27 @@ func (op *OpcodeProgram) SendInput(input int) {
 	op.Execute()
 }
 
-func (op *OpcodeProgram) getInput() int {
+func (op *OpcodeProgram) readInput() int {
 	op.breakOnInput = true
 	return op.input
 }
 
-func getProgramOpcodes(filepath string) []int {
-	var opcodes []int
+func (op OpcodeProgram) GetLastOutput() int {
+	return op.Output[len(op.Output) - 1]
+}
+
+
+func (op *OpcodeProgram) readOpCodes(filepath string) {
 
 	data, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		fmt.Println("File reading error", err)
-		return opcodes
 	}
 
 	for _, thisCode := range strings.Split(string(data), ",") {
 		thisParsedCode, _ := strconv.Atoi(thisCode)
-		opcodes = append(opcodes, thisParsedCode)
+		op.opcodes = append(op.opcodes, thisParsedCode)
 	}
-
-	return opcodes
 }
 
 func(op OpcodeProgram) getParameterByMode(offset int, mode int) int {
@@ -130,7 +134,7 @@ OpExecution:
 			if op.breakOnInput {
 				break OpExecution
 			}
-			ip := op.getInput()
+			ip := op.readInput()
 			//fmt.Printf("Read input: %d\n", ip)
 			op.opcodes[target] = ip
 		case OpCodeOutput:
@@ -163,6 +167,7 @@ OpExecution:
 			}
 			op.opcodes[p3] = result
 		case OpCodeHalt:
+			op.Halted = true
 			break OpExecution
 		default:
 			fmt.Printf("Unknown opcode: %d\n", opCode)
