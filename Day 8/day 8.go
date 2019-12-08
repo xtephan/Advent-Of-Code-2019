@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 const ColorBlack int = 0
@@ -14,26 +15,21 @@ const ColorTransparent int = 2
 func getFingerPrint(image string, width int, height int) int {
 	var layerSize = width * height
 	var layersCount = len(image) / layerSize
-	var runes = []rune(image)
+	var imageRunes = []rune(image)
 
 	var min0 = 9999999
 	var currentHash = 0
 
 	for i:=0; i<layersCount; i++ {
 
-		var digitsMap = make(map[string]int)
+		var thisLayer = string(imageRunes[layerSize * i:layerSize * (i+1)])
 
-		for j:=0; j < layerSize; j++ {
-			var currentIndex = layerSize * i + j
-			var key = string(runes[currentIndex])
-			digitsMap[ key ] = digitsMap[ key ] + 1
+		var cnt0 = strings.Count(thisLayer, "0")
+
+		if cnt0 < min0 {
+			min0 = cnt0
+			currentHash = strings.Count(thisLayer, "1") * strings.Count(thisLayer, "2")
 		}
-
-		if digitsMap["0"] < min0 {
-			min0 = digitsMap["0"]
-			currentHash = digitsMap["1"] * digitsMap["2"]
-		}
-
 	}
 
 	return currentHash
