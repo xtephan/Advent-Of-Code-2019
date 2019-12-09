@@ -16,15 +16,21 @@ const OpJumpIfTrue int = 5
 const OpJumpIfFalse int = 6
 const OpLessThan int = 7
 const OpEquals int = 8
+const OpAdjustRelativeBase int = 9
 const OpCodeHalt int = 99
 
+const ParameterModePosition int = 0
+const ParameterModeImmediate int = 1
+const ParameterModeRelative int = 2
+
 type OpcodeProgram struct {
-	opcodes []int
+	opcodes map[int]int
 	breakOnInput bool
 	input int
 	pointer int
 	Output []int
 	Halted bool
+	relativeBase int
 }
 
 var pointerIncrements = map[int]int{
@@ -36,16 +42,18 @@ var pointerIncrements = map[int]int{
 	OpJumpIfFalse: 0,
 	OpLessThan: 4,
 	OpEquals: 4,
+	OpAdjustRelativeBase: 2,
 }
 
 func New(filepath string) OpcodeProgram {
 	op := OpcodeProgram{
-		opcodes: []int {},
+		opcodes: make(map[int]int),
 		breakOnInput: true,
 		input: 0,
 		Output: []int {},
 		pointer: 0,
 		Halted: false,
+		relativeBase: 0,
 	}
 	op.readOpCodes(filepath)
 	return op
@@ -69,6 +77,14 @@ func (op OpcodeProgram) GetLastOutput() int {
 	return op.Output[len(op.Output) - 1]
 }
 
+func (op OpcodeProgram) DumpOutput() {
+	fmt.Println("Output:")
+	for _,v:= range op.Output {
+		fmt.Printf("%d ", v)
+	}
+	fmt.Println("\n-----")
+}
+
 
 func (op *OpcodeProgram) readOpCodes(filepath string) {
 
@@ -77,30 +93,24 @@ func (op *OpcodeProgram) readOpCodes(filepath string) {
 		fmt.Println("File reading error", err)
 	}
 
-	for _, thisCode := range strings.Split(string(data), ",") {
+	for index, thisCode := range strings.Split(string(data), ",") {
 		thisParsedCode, _ := strconv.Atoi(thisCode)
-		op.opcodes = append(op.opcodes, thisParsedCode)
+		op.opcodes[index] = thisParsedCode
 	}
 }
 
 func(op OpcodeProgram) getParameterByMode(offset int, mode int) int {
-	var pointer int
+	var parameterPointer = op.pointer + offset
 
-	var currentPosition = op.pointer + offset
-
-	if currentPosition >= len(op.opcodes) {
-		return -1
-	}
-
-	if mode == 1 {
-		pointer = currentPosition
-	} else {
-		pointer = op.opcodes[currentPosition]
-	}
-
-	if pointer < len(op.opcodes) {
-		return op.opcodes[pointer]
-	} else {
+	switch mode {
+	case ParameterModePosition:
+		return op.opcodes[op.opcodes[parameterPointer]]
+	case ParameterModeImmediate:
+		return op.opcodes[parameterPointer]
+	case ParameterModeRelative:
+		return op.opcodes[op.relativeBase + op.opcodes[parameterPointer]]
+	default:
+		fmt.Printf("Unknown parameter mode %d\n", mode)
 		return -1
 	}
 }
@@ -124,19 +134,19 @@ OpExecution:
 
 		switch opCode {
 		case OpCodeAdd:
-			var p3 = op.getParameterByMode(3, 1)
+			var p3 = op.getParameterByMode(3, ParameterModeImmediate)
 			op.opcodes[p3] = p1 + p2
 		case OpCodeMultiply:
-			var p3 = op.getParameterByMode(3, 1)
+			var p3 = op.getParameterByMode(3, ParameterModeImmediate)
 			op.opcodes[p3] = p1 * p2
 		case OpCodeInput:
-			var target = op.getParameterByMode(1, 1)
+			//var target = op.getParameterByMode(1, 1)
 			if op.breakOnInput {
 				break OpExecution
 			}
 			ip := op.readInput()
 			//fmt.Printf("Read input: %d\n", ip)
-			op.opcodes[target] = ip
+			op.opcodes[p1] = ip
 		case OpCodeOutput:
 			op.Output = append(op.Output, p1)
 			//fmt.Printf("Program Output: %d\n", p1)
@@ -153,19 +163,21 @@ OpExecution:
 				op.pointer += 3
 			}
 		case OpLessThan:
-			var p3 = op.getParameterByMode(3, 1)
+			var p3 = op.getParameterByMode(3, ParameterModeImmediate)
 			var result = 0
 			if p1 < p2 {
 				result = 1
 			}
 			op.opcodes[p3] = result
 		case OpEquals:
-			var p3 = op.getParameterByMode(3, 1)
+			var p3 = op.getParameterByMode(3, ParameterModeImmediate)
 			var result = 0
 			if p1 == p2 {
 				result = 1
 			}
 			op.opcodes[p3] = result
+		case OpAdjustRelativeBase:
+			op.relativeBase += p1
 		case OpCodeHalt:
 			op.Halted = true
 			break OpExecution
