@@ -22,6 +22,7 @@ const OpCodeHalt int = 99
 const ParameterModePosition int = 0
 const ParameterModeImmediate int = 1
 const ParameterModeRelative int = 2
+const ParameterModeRelativeInput int = -2
 
 type OpcodeProgram struct {
 	opcodes map[int]int
@@ -109,7 +110,8 @@ func(op OpcodeProgram) getParameterByMode(offset int, mode int) int {
 		return op.opcodes[parameterPointer]
 	case ParameterModeRelative:
 		return op.opcodes[op.relativeBase + op.opcodes[parameterPointer]]
-		//return op.opcodes[op.relativeBase + op.opcodes[parameterPointer]]
+	case ParameterModeRelativeInput:
+		return op.relativeBase + op.opcodes[parameterPointer]
 	default:
 		fmt.Printf("Unknown parameter mode %d\n", mode)
 		return -1
@@ -119,6 +121,15 @@ func(op OpcodeProgram) getParameterByMode(offset int, mode int) int {
 func(op OpcodeProgram) getParameter(offset int) int {
 	var mode = op.opcodes[op.pointer] / int(math.Pow10(offset + 1)) % 10
 	return op.getParameterByMode(offset, mode)
+}
+
+func(op OpcodeProgram) getWriteParameter(offset int) int {
+	var mode = op.opcodes[op.pointer] / int(math.Pow10(offset + 1)) % 10
+	if mode == ParameterModeRelative {
+		return op.getParameterByMode(offset, ParameterModeRelativeInput)
+	} else {
+		return op.getParameterByMode(offset, ParameterModeImmediate)
+	}
 }
 
 func(op *OpcodeProgram) Execute() {
@@ -135,19 +146,19 @@ OpExecution:
 
 		switch opCode {
 		case OpCodeAdd:
-			var p3 = op.getParameterByMode(3, ParameterModeImmediate)
+			var p3 = op.getWriteParameter(3)
 			op.opcodes[p3] = p1 + p2
 		case OpCodeMultiply:
-			var p3 = op.getParameterByMode(3, ParameterModeImmediate)
+			var p3 = op.getWriteParameter(3)
 			op.opcodes[p3] = p1 * p2
 		case OpCodeInput:
-			//var target = op.getParameterByMode(1, 1)
+			var target = op.getWriteParameter(1)
 			if op.breakOnInput {
 				break OpExecution
 			}
 			ip := op.readInput()
 			//fmt.Printf("Read input: %d\n", ip)
-			op.opcodes[op.relativeBase + op.opcodes[op.pointer + 1]] = ip
+			op.opcodes[target] = ip
 		case OpCodeOutput:
 			op.Output = append(op.Output, p1)
 			//fmt.Printf("Program Output: %d\n", p1)
@@ -164,14 +175,14 @@ OpExecution:
 				op.pointer += 3
 			}
 		case OpLessThan:
-			var p3 = op.getParameterByMode(3, ParameterModeImmediate)
+			var p3 = op.getWriteParameter(3)
 			var result = 0
 			if p1 < p2 {
 				result = 1
 			}
 			op.opcodes[p3] = result
 		case OpEquals:
-			var p3 = op.getParameterByMode(3, ParameterModeImmediate)
+			var p3 = op.getWriteParameter(3)
 			var result = 0
 			if p1 == p2 {
 				result = 1
