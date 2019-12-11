@@ -109,6 +109,7 @@ func(op OpcodeProgram) getParameterByMode(offset int, mode int) int {
 		return op.opcodes[parameterPointer]
 	case ParameterModeRelative:
 		return op.opcodes[op.relativeBase + op.opcodes[parameterPointer]]
+		//return op.opcodes[op.relativeBase + op.opcodes[parameterPointer]]
 	default:
 		fmt.Printf("Unknown parameter mode %d\n", mode)
 		return -1
@@ -146,7 +147,7 @@ OpExecution:
 			}
 			ip := op.readInput()
 			//fmt.Printf("Read input: %d\n", ip)
-			op.opcodes[p1] = ip
+			op.opcodes[op.relativeBase + op.opcodes[op.pointer + 1]] = ip
 		case OpCodeOutput:
 			op.Output = append(op.Output, p1)
 			//fmt.Printf("Program Output: %d\n", p1)
