@@ -2,20 +2,25 @@ package main
 
 import (
 	"../modules/opcodeProgram"
-	"fmt"
 )
 
 func main() {
 
 
-	var program2 = opcodeProgram.New("Day 9/data.in")
-	program2.Execute()
-	program2.SendInput(1)
-	program2.DumpOutput()
-
-	//var program = opcodeProgram.New("Day 9/data-test.in")
+	// Part 1
+	//var program = opcodeProgram.New("Day 9/data.in")
 	//program.Execute()
+	//program.SendInput(1)
 	//program.DumpOutput()
 
-	fmt.Println("\n-----")
+	// Part 2
+	var program2 = opcodeProgram.New("Day 9/data.in")
+	program2.Execute()
+	program2.SendInput(2)
+	program2.DumpOutput()
+
+	// Test
+	//var programTest = opcodeProgram.New("Day 9/data-test.in")
+	//programTest.Execute()
+	//programTest.DumpOutput()
 }
