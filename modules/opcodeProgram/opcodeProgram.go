@@ -60,6 +60,10 @@ func New(filepath string) OpcodeProgram {
 	return op
 }
 
+func (op *OpcodeProgram) SetMemory(pointer int, value int) {
+	op.opcodes[pointer] = value
+}
+
 func (op *OpcodeProgram) SendInput(input int) {
 	// have the input
 	op.breakOnInput = false
@@ -76,6 +80,10 @@ func (op *OpcodeProgram) readInput() int {
 
 func (op OpcodeProgram) GetLastOutput() int {
 	return op.Output[len(op.Output) - 1]
+}
+
+func (op *OpcodeProgram) ClearOutput()  {
+	op.Output = []int {}
 }
 
 func (op OpcodeProgram) DumpOutput() {
